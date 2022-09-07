@@ -15,7 +15,6 @@ line_bot_api = LineBotApi('9EXM/EXlA0Ny45voTbbXBHwcGQrqdrhGUrnWu0HCziIRfBMXrD6zq
 # 必須放上自己的Channel Secret
 handler = WebhookHandler('9358a9068fd4abd2131b522197e8ca56')
 
-line_bot_api.push_message('你自己的ID', TextSendMessage(text='你可以開始了'))
 
 
 # 監聽所有來自 /callback 的 Post Request
@@ -46,7 +45,6 @@ def handle_message(event):
     line_bot_api.reply_message(event.reply_token,message)
 
 #主程式
-import os
+
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run()
