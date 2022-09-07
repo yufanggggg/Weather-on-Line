@@ -1,67 +1,62 @@
-import requests
+from __future__ import unicode_literals
+import os
 from flask import Flask, request, abort
-
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.exceptions import (
-    InvalidSignatureError
-)
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-)
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
+import configparser
+import random
 
 app = Flask(__name__)
 
-line_bot_api = LineBotApi('9vW9RRY+UoIEWpuV577G6fRs4X8RHe9tMzZEXd2i40epSOFxDq8v2P5ITT3uVV4juN6SkXktJ+ToP8PLtDSjIwZ0Mu4TD1K7chjvEjMxIfKdVCR6tayxbmg1do1Oz1+POVbOOfBGG10J7nSJJeKfdgdB04t89/1O/w1cDnyilFU=')
-handler = WebhookHandler('dbc1bb75c6af4728628446ef6ef88b38')
+# LINE 聊天機器人的基本資料
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+line_bot_api = LineBotApi(config.get('line-bot', 'channel_access_token'))
+handler = WebhookHandler(config.get('line-bot', 'channel_secret'))
 
 
-@app.route("/callback", methods=['POST'])
+# 接收 LINE 的資訊
+@app.route("/callback", methods=['GET', 'POST'])
 def callback():
-    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
 
-    # get request body as text
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
 
-    # handle webhook body
     try:
+        print(body, signature)
         handler.handle(body, signature)
+
     except InvalidSignatureError:
-        print("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
 
     return 'OK'
 
-
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    message=text=event.message.text
-    url="https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=rdec-key-123-45678-011121314"
-    data=requests.get(url)
-    data_json = data.json()    # 轉換成 JSON 格式
+def prettyEcho(event):
 
-    placesqty=len(data_json['records']['location'])
-    weatherqty=len(data_json['records']['location'][0]['weatherElement'])
-    weathertime=len(data_json['records']['location'][0]['weatherElement'][0]['time'])
+    sendString = ""
+    if "擲筊" in event.message.text:
+        sendString = divinationBlocks()
+    elif "抽簽" in event.message.text or "抽" in event.message.text:
+        sendString = drawStraws()
+    else:
+        sendString = event.message.text 
 
-    def datainfo(search):
-        for i in range(placesqty):
-            if message==data_json['records']['location'][i]['locationName']:
-                print(data_json['records']['location'][i]['locationName'])       
-                for j in range(weathertime):
-                    print(data_json['records']['location'][i]['weatherElement'][0]['time'][j]['startTime']+"-"+data_json['records']['location'][i]['weatherElement'][0]['time'][j]['endTime'])
-                    print(data_json['records']['location'][i]['weatherElement'][0]['time'][j]['parameter']['parameterName'])
-                    print("降雨機率:"+data_json['records']['location'][i]['weatherElement'][1]['time'][j]['parameter']['parameterName']+"%")
-                    print(data_json['records']['location'][i]['weatherElement'][2]['time'][j]['parameter']['parameterName']+"度-"+data_json['records']['location'][i]['weatherElement'][4]['time'][j]['parameter']['parameterName']+"度")
-                    print(data_json['records']['location'][i]['weatherElement'][3]['time'][j]['parameter']['parameterName'])
-    # line_bot_api.reply_message(
-    #     event.reply_token,
-    #     TextSendMessage(text=event.message.text))
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=sendString)
+    )
 
+def divinationBlocks():
+    divinationBlocksList = ["笑杯", "正杯", "正杯", "笑杯"] 
+    return divinationBlocksList[random.randint(0, len(divinationBlocksList) - 1)]
 
+def drawStraws():
+    drawStrawsList = ["大吉", "中吉", "小吉", "吉", "凶", "小凶", "中凶", "大凶"]
+    return drawStrawsList[random.randint(0, len(drawStrawsList) - 1)]
 
 if __name__ == "__main__":
     app.run()
