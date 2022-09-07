@@ -6,24 +6,28 @@ from linebot import (
 from linebot.exceptions import (
     InvalidSignatureError
 )
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-)
+from linebot.models import *
 
 app = Flask(__name__)
 
-# 填入你的 message api 資訊
-line_bot_api = LineBotApi('9vW9RRY+UoIEWpuV577G6fRs4X8RHe9tMzZEXd2i40epSOFxDq8v2P5ITT3uVV4juN6SkXktJ+ToP8PLtDSjIwZ0Mu4TD1K7chjvEjMxIfKdVCR6tayxbmg1do1Oz1+POVbOOfBGG10J7nSJJeKfdgdB04t89/1O/w1cDnyilFU=')
-handler = WebhookHandler('dbc1bb75c6af4728628446ef6ef88b38')
+# 必須放上自己的Channel Access Token
+line_bot_api = LineBotApi('9EXM/EXlA0Ny45voTbbXBHwcGQrqdrhGUrnWu0HCziIRfBMXrD6zqa0e2ZL8VcYyeMq5USfq+bCAFwsUpLunzyoWZ1XNvCRuX70Urj5+zunWkt/dOU1i9P/uL533UAfN+zZTbzc2ddhnVdzrdbG+SAdB04t89/1O/w1cDnyilFU=')
+# 必須放上自己的Channel Secret
+handler = WebhookHandler('9358a9068fd4abd2131b522197e8ca56')
 
+line_bot_api.push_message('你自己的ID', TextSendMessage(text='你可以開始了'))
+
+
+# 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
 
+ 
     # get request body as text
     body = request.get_data(as_text=True)
-    print("Request body: " + body, "Signature: " + signature)
+    app.logger.info("Request body: " + body)
 
     # handle webhook body
     try:
@@ -33,14 +37,16 @@ def callback():
 
     return 'OK'
 
-
+ 
+#訊息傳遞區塊
+##### 基本上程式編輯都在這個function #####
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    print("Handle: reply_token: " + event.reply_token + ", message: " + event.message.text)
-    content = "{}: {}".format(event.source.user_id, event.message.text)
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=content))
+    message = TextSendMessage(text=event.message.text)
+    line_bot_api.reply_message(event.reply_token,message)
 
+#主程式
+import os
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
