@@ -1,62 +1,47 @@
-from __future__ import unicode_literals
-import os
 from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
-import configparser
-import random
+
+from linebot import (
+    LineBotApi, WebhookHandler
+)
+from linebot.exceptions import (
+    InvalidSignatureError
+)
+from linebot.models import (
+    MessageEvent, TextMessage, TextSendMessage,
+)
 
 app = Flask(__name__)
 
-# LINE 聊天機器人的基本資料
-config = configparser.ConfigParser()
-config.read('config.ini')
+# 填入你的 message api 資訊
+line_bot_api = LineBotApi('9vW9RRY+UoIEWpuV577G6fRs4X8RHe9tMzZEXd2i40epSOFxDq8v2P5ITT3uVV4juN6SkXktJ+ToP8PLtDSjIwZ0Mu4TD1K7chjvEjMxIfKdVCR6tayxbmg1do1Oz1+POVbOOfBGG10J7nSJJeKfdgdB04t89/1O/w1cDnyilFU=')
+handler = WebhookHandler('dbc1bb75c6af4728628446ef6ef88b38')
 
-line_bot_api = LineBotApi(config.get('line-bot', 'channel_access_token'))
-handler = WebhookHandler(config.get('line-bot', 'channel_secret'))
-
-
-# 接收 LINE 的資訊
-@app.route("/callback", methods=['GET', 'POST'])
+@app.route("/callback", methods=['POST'])
 def callback():
+    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
 
+    # get request body as text
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
+    print("Request body: " + body, "Signature: " + signature)
 
+    # handle webhook body
     try:
-        print(body, signature)
         handler.handle(body, signature)
-
     except InvalidSignatureError:
         abort(400)
 
     return 'OK'
 
+
 @handler.add(MessageEvent, message=TextMessage)
-def prettyEcho(event):
-
-    sendString = ""
-    if "擲筊" in event.message.text:
-        sendString = divinationBlocks()
-    elif "抽簽" in event.message.text or "抽" in event.message.text:
-        sendString = drawStraws()
-    else:
-        sendString = event.message.text 
-
+def handle_message(event):
+    print("Handle: reply_token: " + event.reply_token + ", message: " + event.message.text)
+    content = "{}: {}".format(event.source.user_id, event.message.text)
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=sendString)
-    )
+        TextSendMessage(text=content))
 
-def divinationBlocks():
-    divinationBlocksList = ["笑杯", "正杯", "正杯", "笑杯"] 
-    return divinationBlocksList[random.randint(0, len(divinationBlocksList) - 1)]
-
-def drawStraws():
-    drawStrawsList = ["大吉", "中吉", "小吉", "吉", "凶", "小凶", "中凶", "大凶"]
-    return drawStrawsList[random.randint(0, len(drawStrawsList) - 1)]
-
+import os
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0',port=os.environ['PORT'])
